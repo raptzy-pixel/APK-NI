@@ -1,0 +1,53 @@
+name: Build RAPIUZY AI APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.8'
+          channel: stable
+
+      - name: Extract project ZIP
+        run: |
+          mkdir extracted
+          unzip -q *.zip -d extracted
+
+      - name: Find Flutter project
+        run: |
+          PROJECT_DIR=$(dirname "$(find extracted -name pubspec.yaml -print -quit)")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Prepare Android project
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          flutter pub get
+          flutter create --platforms=android .
+
+      - name: Build APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAPIUZY-AI-APK
+          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
